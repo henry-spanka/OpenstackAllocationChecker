@@ -1,0 +1,3 @@
+*.pyc
+allocation_*.json
+resource_providers.json
