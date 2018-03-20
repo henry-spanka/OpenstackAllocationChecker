@@ -30,7 +30,7 @@ def displayMessage(level, message):
     print date.strftime('%Y-%m-%d %H:%M:%S - ') + level.upper() + ': ' + message
 
 def fixSuggestion(consumer_id, used, resource_class_id):
-    displayMessage('fix', 'update allocations set used = \'{}\' where consumer_id = \'{}\' and resource_class_id = \'{}\';'
+    return ('update allocations set used = \'{}\' where consumer_id = \'{}\' and resource_class_id = \'{}\';'
         .format(used, consumer_id, resource_class_id))
 
 def main():
@@ -67,6 +67,8 @@ def main():
 
     allocations = json.loads(json_data)['allocations']
 
+    sqlFixCommands = []
+
     for instance in allocations:
         allocation = allocations[instance]
 
@@ -88,23 +90,28 @@ def main():
 
         if vCPU != vCPU_flavor:
             displayMessage('warning', 'instance {} vCPU inconsistent: {}/{} (allocated/real)'.format(instance, vCPU, vCPU_flavor))
-            fixSuggestion(instance, vCPU_flavor, '0')
+            sqlFixCommands.append(fixSuggestion(instance, vCPU_flavor, '0'))
             inconsistent = True
 
         if memory_mb != memory_mb_flavor:
             displayMessage('warning', 'instance {} memory inconsistent: {}/{} (allocated/real)'.format(instance, memory_mb, memory_mb_flavor))
-            fixSuggestion(instance, memory_mb_flavor, '1')
+            sqlFixCommands.append(fixSuggestion(instance, memory_mb_flavor, '1'))
             inconsistent = True
 
         if disk_gb != disk_gb_flavor:
             displayMessage('warning', 'instance {} disk inconsistent: {}/{} (allocated/real)'.format(instance, disk_gb, disk_gb_flavor))
-            fixSuggestion(instance, disk_gb_flavor, '2')
+            sqlFixCommands.append(fixSuggestion(instance, disk_gb_flavor, '2'))
             inconsistent = True
 
         if inconsistent:
             displayMessage('warning', 'instance {} is INCONSISTENT'.format(instance))
         else:
             displayMessage('info', 'instance {} is CONSISTENT'.format(instance))
+
+    sqlFixFile = open('sqlFixes.sql', 'w')
+    for fix in sqlFixCommands:
+        sqlFixFile.write('%s\n' % fix)
+    sqlFixFile.close()
 
     exit(0)
 
